@@ -4,16 +4,24 @@ include 'conn.php';
 if (isset($_GET['id'])) {
     $id = $_GET['id'];
 
-    $sql="DELETE FROM students WHERE id = $id";
-    if(mysqli_query($conn, $sql)) {
-        echo "Record deleted successfully.";
+    try {
+        $sql = "DELETE FROM students WHERE id = :id";
+        $stmt = $conn->prepare($sql);
+
+        $stmt->execute([
+            ':id' => $id
+        ]);
+
+        header("Location: index.php");
+        exit;
+
+    } catch (PDOException $e) {
+        echo "Error deleting record: " . $e->getMessage();
     }
 
-    // Redirect back to the student list
-    header("Location: index.php");
-    exit;
 } else {
     // If no ID is provided, redirect back to the student list
     header("Location: index.php");
     exit;
 }
+?>

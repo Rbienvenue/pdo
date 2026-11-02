@@ -147,6 +147,8 @@ $stmt = $conn->query($sql);
             <th>Age</th>
             <th>Gender</th>
             <th>Course</th>
+            <th>Edit</th>
+            <th>Delete</th>
         </tr>
 
         <?php while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { ?>
@@ -156,7 +158,9 @@ $stmt = $conn->query($sql);
                 <td><?php echo $row['age']; ?></td>
                 <td><?php echo htmlspecialchars($row['gender']); ?></td>
                 <td><?php echo htmlspecialchars($row['course']); ?></td>
-                <td><a href="edit_student.php"></a></td>
+                <td><a href="edit_student.php?id=<?php echo $row['id']; ?>">Edit</a></td>
+                <td><a href="delete_student.php?id=<?php echo $row['id']; ?>" onclick="return confirm('Are you sure you want to delete this student?');">Delete</a></td>
+
             </tr>
         <?php } ?>
     <a href="add_student.php">Add new student</a>

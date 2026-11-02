@@ -20,7 +20,6 @@ if (isset($_GET['id'])) {
     }
 
 } else {
-    // If no ID is provided, redirect back to the student list
     header("Location: index.php");
     exit;
 }

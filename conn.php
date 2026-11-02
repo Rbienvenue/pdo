@@ -1,5 +1,10 @@
 <?php
-$conn=mysqli_connect("localhost","root","","school");
-if(!$conn){
-    die("Connection failed: " . mysqli_connect_error());
+try {
+    $conn = new PDO("mysql:host=localhost;dbname=school", "root", "");
+
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
 }
+?>

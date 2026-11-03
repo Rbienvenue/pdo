@@ -1,189 +1,109 @@
 <?php
-$conn = new PDO("mysql:host=localhost;dbname=school", "root", "");
+require "auth.php";
+requireLogin();
+require "conn.php";
 
 $message = "";
+$name = "";
+$ageValue = "";
+$gender = "";
+$course = "";
+$email = "";
+$telephone = "";
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $nameInput = $_POST["name"] ?? "";
+    $courseInput = $_POST["course"] ?? "";
+    $emailInput = $_POST["email"] ?? "";
+    $telephoneInput = $_POST["telephone"] ?? "";
+    $ageInput = $_POST["age"] ?? "";
+    $name = is_string($nameInput) ? trim($nameInput) : "";
+    $ageValue = is_scalar($ageInput) ? (string) $ageInput : "";
+    $age = filter_var($ageValue, FILTER_VALIDATE_INT);
+    $genderInput = $_POST["gender"] ?? "";
+    $course = is_string($courseInput) ? trim($courseInput) : "";
+    $gender = is_string($genderInput) ? $genderInput : "";
+    $email = is_string($emailInput) ? trim($emailInput) : "";
+    $telephone = is_string($telephoneInput) ? trim($telephoneInput) : "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    $name = trim($_POST["name"]);
-    $age = $_POST["age"];
-    $gender = $_POST["gender"];
-    $course = trim($_POST["course"]);
-
-    if (empty($name) || empty($age) || empty($gender) || empty($course)) {
-        $message = "Please fill in all fields.";
-    } elseif (!filter_var($age, FILTER_VALIDATE_INT) || $age < 1) {
-        $message = "Please enter a valid age.";
+    if ($name === "" || strlen($name) > 100 || !$age || $age < 1 || $age > 120 || !in_array($gender, ["Male", "Female"], true) || $course === "" || strlen($course) > 100 || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254 || !isValidTelephone($telephone)) {
+        $message = "Please enter valid details in every field.";
     } else {
+        $existingEmail = $conn->prepare("SELECT id FROM students WHERE email = :email LIMIT 1");
+        $existingEmail->execute([":email" => $email]);
+        if ($existingEmail->fetch()) {
+            $message = "A student with that email address already exists.";
+        } else {
+            $insert = $conn->prepare("INSERT INTO students (name, age, gender, course, email, telephone) VALUES (:name, :age, :gender, :course, :email, :telephone)");
+            $insert->execute([
+                ":name" => $name,
+                ":age" => $age,
+                ":gender" => $gender,
+                ":course" => $course,
+                ":email" => $email,
+                ":telephone" => $telephone
+            ]);
+            $studentId = (int) $conn->lastInsertId();
+            $update = $conn->prepare("UPDATE students SET regno = :regno WHERE id = :id");
+            $update->execute([
+                ":regno" => sprintf("STU-%05d", $studentId),
+                ":id" => $studentId
+            ]);
 
-        $sql = "INSERT INTO students (name, age, gender, course)
-                VALUES (:name, :age, :gender, :course)";
-
-        $stmt = $conn->prepare($sql);
-
-        $stmt->execute([
-            ":name" => $name,
-            ":age" => $age,
-            ":gender" => $gender,
-            ":course" => $course
-        ]);
-
-        header("Location: index.php");
-        exit;
+            header("Location: index.php");
+            exit;
+        }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Student</title>
-    <!-- <link rel="stylesheet" href="style.css"> -->
-
-    <style>
-        /* General page styling */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f2f2f2;
-            margin: 0;
-            padding: 30px;
-        }
-
-        /* Page heading */
-        h2 {
-            text-align: center;
-            color: #333;
-        }
-
-        /* Table styling */
-        table {
-            width: 80%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            background-color: white;
-        }
-
-        /* Table headings and cells */
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-
-        /* Table header */
-        th {
-            background-color: #052435;
-            color: white;
-        }
-
-        /* Alternate row colors */
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        /* Hover effect */
-        tr:hover {
-            background-color: #e6f2ff;
-        }
-
-        /* Student form */
-        form {
-            width: 80%;
-            max-width: 400px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px #ccc;
-        }
-
-        /* Form labels */
-        label {
-            font-weight: bold;
-            color: #333;
-        }
-
-        /* Form inputs */
-        input,
-        select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        /* Submit button */
-        button {
-            background-color: #052435;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        /* Button hover */
-        button:hover {
-            background-color: #052435ac;
-        }
-
-        /* Links */
-        a {
-            color: #052435;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-
-
+    <title>Add student | CampusHub</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
-<body>
-
-    <h2>Add New Student</h2>
-
-    <p>
-        <a href="index.php">Return to Student List</a>
-    </p>
-    <form action="" method="POST">
-
-        <label for="name">Student Name:</label><br>
-        <input type="text" id="name" name="name" required>
-        <br><br>
-
-        <label for="age">Age:</label><br>
-        <input type="number" id="age" name="age" min="1" required>
-        <br><br>
-
-        <label for="gender">Gender:</label><br>
-        <select id="gender" name="gender" required>
-            <option value="">Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-        </select>
-        <br><br>
-
-        <label for="course">Course:</label><br>
-        <input type="text" id="course" name="course" required>
-        <br><br>
-
-        <button type="submit">Add Student</button>
-
-    </form>
-
-    <p style="color: red;">
-        <?php echo htmlspecialchars($message); ?>
-    </p>
-
+<body class="app-page">
+    <?php renderSidebar("add-student"); ?>
+    <main class="main-content">
+        <header class="page-header">
+            <p class="eyebrow">STUDENT RECORDS</p>
+            <h1>Add student</h1>
+            <p class="muted">Enter the student's details below.</p>
+        </header>
+        <section class="panel form-panel">
+            <?php if ($message !== "") { ?>
+                <p class="notice error"><?php echo htmlspecialchars($message, ENT_QUOTES, "UTF-8"); ?></p>
+            <?php } ?>
+            <form method="post" class="form-card">
+                <label for="name">Student name</label>
+                <input id="name" name="name" type="text" maxlength="100" required value="<?php echo htmlspecialchars($name, ENT_QUOTES, "UTF-8"); ?>">
+                <div class="form-row">
+                    <div>
+                        <label for="age">Age</label>
+                        <input id="age" name="age" type="number" min="1" max="120" required value="<?php echo htmlspecialchars($ageValue, ENT_QUOTES, "UTF-8"); ?>">
+                    </div>
+                    <div>
+                        <label for="gender">Gender</label>
+                        <select id="gender" name="gender" required>
+                            <option value="">Select gender</option>
+                            <option value="Male" <?php echo $gender === "Male" ? "selected" : ""; ?>>Male</option>
+                            <option value="Female" <?php echo $gender === "Female" ? "selected" : ""; ?>>Female</option>
+                        </select>
+                    </div>
+                </div>
+                <label for="course">Course</label>
+                <input id="course" name="course" type="text" maxlength="100" required value="<?php echo htmlspecialchars($course, ENT_QUOTES, "UTF-8"); ?>">
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" maxlength="254" autocomplete="email" required value="<?php echo htmlspecialchars($email, ENT_QUOTES, "UTF-8"); ?>">
+                <label for="telephone">Telephone number</label>
+                <input id="telephone" name="telephone" type="tel" maxlength="30" autocomplete="tel" required value="<?php echo htmlspecialchars($telephone, ENT_QUOTES, "UTF-8"); ?>">
+                <div class="button-row">
+                    <a class="button button-secondary" href="index.php">Cancel</a>
+                    <button type="submit" class="button">Add student</button>
+                </div>
+            </form>
+        </section>
+    </main>
 </body>
-
 </html>
